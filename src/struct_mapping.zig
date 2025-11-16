@@ -199,8 +199,10 @@ fn setValue(ctx: *Context, comptime T: type, dest: *T, value: *const Value) !voi
                 switch (value.*) {
                     .string => |s| {
                         if (std.mem.eql(u8, field.name, s)) {
-                            dest.* = @unionInit(T, field.name, {});
-                            break;
+                            if (field.type == void) {
+                                dest.* = @unionInit(T, field.name, {});
+                                break;
+                            }
                         }
                     },
                     .table => |tbl| {
