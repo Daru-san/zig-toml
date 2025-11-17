@@ -151,27 +151,46 @@ test "parse into struct" {
     try testing.expectEqual(11, aa.hm2.map.get("f3").?.bb);
 }
 
-pub const level: std.testing.log_level = .debug;
-
 test "parse-into-union" {
-    std.testing.log_level = .debug;
     const uni = union(enum) {
         name: []const u8,
         id: u12,
+        tail,
     };
 
     const Over = struct { head: ?uni };
 
-    var parser = main.Parser(Over).init(testing.allocator);
+    const List = struct { overs: []Over };
+
+    var parser = main.Parser(List).init(testing.allocator);
     defer parser.deinit();
 
     const parsed = try parser.parseString(
-        \\head = {name = "Hex"}
+        \\ [[overs]]
+        \\ head = "tail"
+        \\ [[overs]]
+        \\ head = {name = "PQR"}
+        \\ [[overs]]
+        \\ head = {id = 12}
     );
 
     defer parsed.deinit();
     const v = parsed.value;
-    try testing.expect(v.head != null);
+
+    for (v.overs) |over| {
+        const head = over.head;
+        try testing.expect(head != null);
+
+        switch (head.?) {
+            .tail => {},
+            .name => |name| {
+                try testing.expect(std.ascii.eqlIgnoreCase(name, "pqr"));
+            },
+            .id => |id| {
+                try testing.expect(id == 12);
+            },
+        }
+    }
 }
 
 test "optionals (--release=fast/safe)" {
